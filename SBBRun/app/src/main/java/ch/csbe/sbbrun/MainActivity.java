@@ -33,10 +33,10 @@ public class MainActivity extends AppCompatActivity {
     public static MainActivity obj;
     public static final int MY_PERMISSION_ACCESS_COARSE_LOCATION = 0;
 
-    public String et_lugar;
+    public static String et_lugar;
 
-    private WebView webview;
-    private boolean load = false;
+    private static WebView webview;
+    private static boolean load = false;
 
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
@@ -59,12 +59,6 @@ public class MainActivity extends AppCompatActivity {
         obj = this;
         setContentView(R.layout.activity_main);
 
-        webview = (WebView) findViewById(R.id.webview);
-        webview.loadUrl("http://fahrplan.sbb.ch/bin/query.exe/dn?Id=std5.a&");
-
-        webview.getSettings().setJavaScriptEnabled(true);
-        webview.getSettings().setDomStorageEnabled(true);
-
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         // Create the adapter that will return a fragment for each of the three
@@ -75,97 +69,6 @@ public class MainActivity extends AppCompatActivity {
         mViewPager = (ViewPager) findViewById(R.id.container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
 
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
-
-        GPSTracker gps = new GPSTracker(this);
-
-        if (gps.canGetLocation()) {
-            double latitude = gps.getLatitude();
-            double longitude = gps.getLongitude();
-
-
-            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-
-
-            try {
-                List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
-
-                if (addresses != null) {
-                    Address returnedAddress = addresses.get(0);
-                    StringBuilder strReturnedAddress = new StringBuilder();
-                    for (int i = 0; i < returnedAddress.getMaxAddressLineIndex(); i++) {
-                        strReturnedAddress.append(returnedAddress.getAddressLine(i)).append(" ");
-                    }
-                    et_lugar = strReturnedAddress.toString();
-                }
-                else {
-                    et_lugar = "No Address returned!";
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-                et_lugar = "Canont get Address!";
-            }
-
-
-
-            Toast.makeText(getApplicationContext(), "Your Location is -\nLat: " + latitude + "\nLong: " + longitude + "\nName: " + et_lugar, Toast.LENGTH_LONG).show();
-
-
-        } else {
-            gps.showSettingsAlert();
-        }
-
-
-        webview.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                //Toast.makeText(MainActivity.this, "Page Finished", Toast.LENGTH_SHORT).show();
-                if (load == false) {
-                    webview.evaluateJavascript("javascript:{document.getElementsByTagName('body')[0].style.display='none'," +
-                                    "document.formular.REQ0JourneyStopsS0G.value='" + et_lugar + "'," +
-                                    "document.formular.REQ0JourneyStopsZ0G.value='Burgdorf'," +
-                                    "document.getElementsByName('changeQueryInputData=yes&start')[0].click();}",
-                            new ValueCallback<String>() {
-                                @Override
-                                public void onReceiveValue(String s) {
-                                    Toast.makeText(MainActivity.this, "Res Value", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                    load = true;
-                } else {
-
-                }
-
-                webview.evaluateJavascript("javascript:{document.getElementsByTagName('body')[0].style.display=''," +
-                                "document.getElementsByClassName('head')[0].style.display='none'," +
-                                "document.getElementsByClassName('line mainHd')[0].style.display='none'," +
-                                "document.getElementsByClassName('hac_greybox')[0].style.display='none'," +
-                                "document.getElementsByClassName('hac_greybox')[4].style.display='none'," +
-                                "document.getElementsByClassName('hac_greybox')[5].style.display='none'," +
-                                "document.getElementsByClassName('hac_greybox')[6].style.display='none'," +
-                                "document.getElementsByClassName('hac_greybox')[7].style.display='none'," +
-                                "document.getElementsByClassName('mod modIndexPath')[0].style.display='none'," +
-                                "document.getElementsByClassName('rightCol sbb-1col sbb-col-left-margin')[0].style.display=\"none\"," +
-                                "document.getElementsByClassName('open openDetails icon_only')[0].click()," +
-                                "document.getElementsByClassName('open openDetails icon_only')[2].click();}",
-                        new ValueCallback<String>() {
-                            @Override
-                            public void onReceiveValue(String s) {
-
-                            }
-                        });
-            }
-
-        });
 
     }
 
@@ -184,10 +87,6 @@ public class MainActivity extends AppCompatActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
 
         return super.onOptionsItemSelected(item);
     }
@@ -220,9 +119,114 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
+            String s = getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER));
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-            TextView textView = (TextView) rootView.findViewById(R.id.section_label);
-            textView.setText(getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER)));
+
+            if (s.equals("1")) {
+                rootView = inflater.inflate(R.layout.fragment_main, container, false);
+                TextView textView = (TextView) rootView.findViewById(R.id.section_label);
+                textView.setText("SBBRun");
+
+                webview = (WebView) rootView.findViewById(R.id.webview);
+                webview.loadUrl("http://fahrplan.sbb.ch/bin/query.exe/de");
+
+                webview.getSettings().setJavaScriptEnabled(true);
+                webview.getSettings().setDomStorageEnabled(true);
+
+                GPSTracker gps = new GPSTracker(MainActivity.obj);
+
+                if (gps.canGetLocation()) {
+                    double latitude = gps.getLatitude();
+                    double longitude = gps.getLongitude();
+
+
+                    Geocoder geocoder = new Geocoder(MainActivity.obj, Locale.getDefault());
+
+
+                    try {
+                        List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+
+                        if (addresses != null) {
+                            Address returnedAddress = addresses.get(0);
+                            StringBuilder strReturnedAddress = new StringBuilder();
+                            for (int i = 0; i < returnedAddress.getMaxAddressLineIndex(); i++) {
+                                strReturnedAddress.append(returnedAddress.getAddressLine(i)).append(" ");
+                            }
+                            et_lugar = strReturnedAddress.toString();
+                        } else {
+                            et_lugar = "No Address returned!";
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        et_lugar = "Canont get Address!";
+                    }
+
+
+                    Toast.makeText(MainActivity.obj.getApplicationContext(), "Your Location is -\nLat: " + latitude + "\nLong: " + longitude + "\nName: " + et_lugar, Toast.LENGTH_LONG).show();
+
+
+                } else {
+                    gps.showSettingsAlert();
+                }
+
+
+                webview.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public void onPageFinished(WebView view, String url) {
+                        super.onPageFinished(view, url);
+                        //Toast.makeText(MainActivity.this, "Page Finished", Toast.LENGTH_SHORT).show();
+                        if (load == false) {
+                            webview.evaluateJavascript("javascript:{document.getElementsByTagName('body')[0].style.display='none'," +
+                                            "document.formular.REQ0JourneyStopsS0G.value='" + et_lugar + "'," +
+                                            "document.formular.REQ0JourneyStopsZ0G.value='Burgdorf'," +
+                                            "document.getElementsByName('changeQueryInputData=yes&start')[0].click();}",
+                                    new ValueCallback<String>() {
+                                        @Override
+                                        public void onReceiveValue(String s) {
+                                            Toast.makeText(MainActivity.obj, "Res Value", Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                            load = true;
+                        } else {
+
+                        }
+
+                        webview.evaluateJavascript("javascript:{document.getElementsByTagName('body')[0].style.display=''," +
+                                        "document.getElementsByClassName('head')[0].style.display='none'," +
+                                        "document.getElementsByClassName('line mainHd')[0].style.display='none'," +
+                                        "document.getElementsByClassName('hac_greybox')[0].style.display='none'," +
+                                        "document.getElementsByClassName('hac_greybox')[4].style.display='none'," +
+                                        "document.getElementsByClassName('hac_greybox')[5].style.display='none'," +
+                                        "document.getElementsByClassName('hac_greybox')[6].style.display='none'," +
+                                        "document.getElementsByClassName('hac_greybox')[7].style.display='none'," +
+                                        "document.getElementsByClassName('mod modIndexPath')[0].style.display='none'," +
+                                        "document.getElementsByClassName('rightCol sbb-1col sbb-col-left-margin')[0].style.display=\"none\"," +
+                                        "document.getElementsByClassName('open openDetails icon_only')[0].click()," +
+                                        "document.getElementsByClassName('open openDetails icon_only')[2].click();}",
+                                new ValueCallback<String>() {
+                                    @Override
+                                    public void onReceiveValue(String s) {
+
+                                    }
+                                });
+                    }
+
+                });
+
+            } else if (s.equals("2")) {
+                rootView = inflater.inflate(R.layout.fragment_settings, container, false);
+                TextView textView = (TextView) rootView.findViewById(R.id.textView3);
+                textView.setText("Settings");
+
+            } else if (s.equals("3")) {
+                rootView = inflater.inflate(R.layout.fragment_about, container, false);
+                TextView textView = (TextView) rootView.findViewById(R.id.textView);
+                textView.setText("About Us");
+
+
+
+            }
+
             return rootView;
         }
     }
@@ -254,11 +258,11 @@ public class MainActivity extends AppCompatActivity {
         public CharSequence getPageTitle(int position) {
             switch (position) {
                 case 0:
-                    return "SECTION 1";
+                    return "SBBRun";
                 case 1:
-                    return "SECTION 2";
+                    return "Settings";
                 case 2:
-                    return "SECTION 3";
+                    return "About Us";
             }
             return null;
         }
