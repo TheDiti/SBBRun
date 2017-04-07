@@ -23,6 +23,9 @@ import android.support.v4.content.ContextCompat;
 
 public class GPSTracker extends Service implements LocationListener {
 
+    /*
+        Dies ist die GPSTracker Klasse, hier wird die Location als Koordinaten herausgeholt werden
+     */
 
     private final Context context;
 
@@ -32,6 +35,7 @@ public class GPSTracker extends Service implements LocationListener {
 
     Location location;
 
+    //Dies sind die so genannten X Y Achsen
     double latitude;
     double longitude;
 
@@ -59,6 +63,7 @@ public class GPSTracker extends Service implements LocationListener {
 
             isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
+            //Hier werden die Latitude und Longitude - falls GPS an ist und sich ein Netzwerkverbindung vorbefindet - ausgerechnet
             if(!isGPSEnabled && !isNetworkEnabled) {
 
             } else {
@@ -110,13 +115,13 @@ public class GPSTracker extends Service implements LocationListener {
         return location;
     }
 
-
     public void stopUsingGPS() {
         if(locationManager != null) {
             locationManager.removeUpdates(this);
         }
     }
 
+    //Mit dieser Methode kann man die Latitude erhalten
     public double getLatitude() {
         if(location != null) {
             latitude = location.getLatitude();
@@ -124,6 +129,7 @@ public class GPSTracker extends Service implements LocationListener {
         return latitude;
     }
 
+    //Mit dieser Methode kann man die Longitude erhalten
     public double getLongitude() {
         if(location != null) {
             longitude = location.getLongitude();
@@ -132,6 +138,12 @@ public class GPSTracker extends Service implements LocationListener {
         return longitude;
     }
 
+    /*
+        Falls das GPS nicht aktiviert ist, wird diese Methode ausgeführt.
+        Es wird ein kleines Dialog geöffnet, welchse warnt das GPS
+        nicht aktiviert ist und einen Button hinstellt welches zur
+        Einstellungen geht.
+     */
     public boolean canGetLocation() {
         return this.canGetLocation;
     }

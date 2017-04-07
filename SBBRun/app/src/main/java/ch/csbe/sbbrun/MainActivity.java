@@ -4,13 +4,9 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.location.Address;
 import android.location.Geocoder;
-import android.provider.Settings;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
@@ -19,7 +15,6 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.os.Bundle;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -30,20 +25,17 @@ import android.webkit.ValueCallback;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
+
+    //Verbindung zu SharePreferences Klasse
+    static SharePreferences sp = new SharePreferences();
 
     public static MainActivity obj;
     public static final int MY_PERMISSION_ACCESS_COARSE_LOCATION = 0;
@@ -74,12 +66,17 @@ public class MainActivity extends AppCompatActivity {
      * The {@link ViewPager} that will host the section contents.
      */
     private ViewPager mViewPager;
-    public static String home = "";
+    public static String home;
 
     public MainActivity(Context context) {
         this.context = context;
     }
+    public static Intent i;
 
+    /*
+        Dies ist die onCreate Methode. Diese wird automatisch
+        beim starten der App ausgeführt.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -92,9 +89,16 @@ public class MainActivity extends AppCompatActivity {
         // primary sections of the activity.
         mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
 
-        // Set up the ViewPager with the sections adapter.
+        sp.Settings = getSharedPreferences(sp.SETTINGS_FILE,sp.SETTINGS_MODE);
+        sp.SettingsEditor = sp.Settings.edit();
+        home = sp.getPlace("place");
+
         mViewPager = (ViewPager) findViewById(R.id.container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
+
+        i = getBaseContext().getPackageManager()
+                .getLaunchIntentForPackage( getBaseContext().getPackageName() );
+        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
 
     }
@@ -126,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
          * The fragment argument representing the section number for this
          * fragment.
          */
+
         private static final String ARG_SECTION_NUMBER = "section_number";
 
         public PlaceholderFragment() {
@@ -143,12 +148,17 @@ public class MainActivity extends AppCompatActivity {
             return fragment;
         }
 
+        /*
+            in der onCreateView Methode werden die funktionen der einzelnen Seiten - die dann per
+            Swipe gewechselt werden - programmiert.
+         */
         @Override
         public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
                                         final Bundle savedInstanceState) {
             String s = getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER));
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
+            //Hier beginnt die erste Seite
             if (s.equals("1")) {
                 rootView = inflater.inflate(R.layout.fragment_main, container, false);
                 final TextView textView = (TextView) rootView.findViewById(R.id.section_label);
@@ -162,6 +172,7 @@ public class MainActivity extends AppCompatActivity {
 
                 GPSTracker gps = new GPSTracker(MainActivity.obj);
 
+                //Hier wird die Location als Wort aus den Koordinaten herausgegeben
                 if (gps.canGetLocation()) {
                     double latitude = gps.getLatitude();
                     double longitude = gps.getLongitude();
@@ -188,10 +199,6 @@ public class MainActivity extends AppCompatActivity {
                         et_lugar = "Canont get Address!";
                     }
 
-
-                    Toast.makeText(MainActivity.obj.getApplicationContext(), "Your Location is -\nLat: " + latitude + "\nLong: " + longitude + "\nName: " + et_lugar, Toast.LENGTH_LONG).show();
-
-
                 } else {
                     gps.showSettingsAlert();
                 }
@@ -202,12 +209,11 @@ public class MainActivity extends AppCompatActivity {
                         super.onPageFinished(view, url);
                         //Toast.makeText(MainActivity.this, "Page Finished", Toast.LENGTH_SHORT).show();
 
-                        final Database dbs = new Database(MainActivity.obj);
-                        //final Cursor data = dbs.getData();
-                        final String s = dbs.getS();
 
+                        String ort = sp.getPlace("place");
 
-                        if(s ==  "") {
+                        //Falls kein Heimatort ausgewählt wurde, wird hier unten ein dialog geöffnet und man kann dan den Heimatort definieren
+                        if(ort.equals("empty")) {
                             final LayoutInflater inflater = getLayoutInflater();
                             View alertLayout = inflater.inflate(R.layout.home_alert, null);
                             final EditText etUsername = (EditText) alertLayout.findViewById(R.id.et_home);
@@ -230,68 +236,33 @@ public class MainActivity extends AppCompatActivity {
 
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
+
                                     home = etUsername.getText().toString();
-                                    if (!home.isEmpty()) {
-                                        dbs.onInsert(home);
-                                        //onCreateView(inflater, container, savedInstanceState);
-
-                                        if (load == false) {
-                                            webview.evaluateJavascript("javascript:{document.getElementsByTagName('body')[0].style.display='none'," +
-                                                            "document.formular.REQ0JourneyStopsS0G.value='" + et_lugar + "'," +
-                                                            "document.formular.REQ0JourneyStopsZ0G.value='" + s + "'," +
-                                                            "document.getElementsByName('changeQueryInputData=yes&start')[0].click();}",
-                                                    new ValueCallback<String>() {
-                                                        @Override
-                                                        public void onReceiveValue(String s) {
-                                                            Toast.makeText(MainActivity.obj, "Res Value", Toast.LENGTH_SHORT).show();
-                                                        }
-                                                    });
-                                            load = true;
-                                        } else {
-
-                                        }
-
-                                        webview.evaluateJavascript("javascript:{document.getElementsByTagName('body')[0].style.display=''," +
-                                                        "document.getElementsByClassName('head')[0].style.display='none'," +
-                                                        "document.getElementsByClassName('line mainHd')[0].style.display='none'," +
-                                                        "document.getElementsByClassName('hac_greybox')[0].style.display='none'," +
-                                                        "document.getElementsByClassName('hac_greybox')[4].style.display='none'," +
-                                                        "document.getElementsByClassName('hac_greybox')[5].style.display='none'," +
-                                                        "document.getElementsByClassName('hac_greybox')[6].style.display='none'," +
-                                                        "document.getElementsByClassName('hac_greybox')[7].style.display='none'," +
-                                                        "document.getElementsByClassName('mod modIndexPath')[0].style.display='none'," +
-                                                        "document.getElementsByClassName('rightCol sbb-1col sbb-col-left-margin')[0].style.display=\"none\"," +
-                                                        "document.getElementsByClassName('open openDetails icon_only')[0].click()," +
-                                                        "document.getElementsByClassName('open openDetails icon_only')[2].click();}",
-                                                new ValueCallback<String>() {
-                                                    @Override
-                                                    public void onReceiveValue(String s) {
-
-                                                    }
-                                                });
-                                    }
-                                        dialog.cancel();
-                                    }
+                                    sp.setPlace("place",home);
+                                    dialog.cancel();
+                                    startActivity(MainActivity.i);
+                                }
 
                             });
                             AlertDialog dialog = alert.create();
                             dialog.show();
-                        } else if (s != "") {
+                        } else {
 
-                                if (load == false) {
+                            //Die JavaScripts wurden benutzt damit unwichtige dinge aus der SBB webseite, entfernt und Knöpfe gedrückt werden.
+                                if (!load) {
                                     webview.evaluateJavascript("javascript:{document.getElementsByTagName('body')[0].style.display='none'," +
                                                     "document.formular.REQ0JourneyStopsS0G.value='" + et_lugar + "'," +
-                                                    "document.formular.REQ0JourneyStopsZ0G.value='" + s + "'," +
+                                                    "document.formular.REQ0JourneyStopsZ0G.value='" + home + "'," +
                                                     "document.getElementsByName('changeQueryInputData=yes&start')[0].click();}",
                                             new ValueCallback<String>() {
                                                 @Override
                                                 public void onReceiveValue(String s) {
-                                                    Toast.makeText(MainActivity.obj, "Res Value", Toast.LENGTH_SHORT).show();
+
                                                 }
                                             });
                                     load = true;
                                 } else {
-
+                                    load = false;
                                 }
 
                                 webview.evaluateJavascript("javascript:{document.getElementsByTagName('body')[0].style.display=''," +
@@ -321,12 +292,25 @@ public class MainActivity extends AppCompatActivity {
 
                 });
 
+            //Hier beginnt die zweite Seite
             } else if (s.equals("2")) {
                 rootView = inflater.inflate(R.layout.fragment_settings, container, false);
                 TextView textView = (TextView) rootView.findViewById(R.id.textView3);
                 textView.setText("Settings");
+                final EditText newHome = (EditText) rootView.findViewById(R.id.editText);
 
+                Button b = (Button) rootView.findViewById(R.id.button);
+                b.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        final String hm = newHome.getText().toString();
+                        sp.setPlace("place",hm); //hiermit wird der Heimatort verändert
+                        startActivity(MainActivity.i); //dies startet die Application neu
 
+                    }
+                });
+
+            //Hier beginnt die dritte Seite
             } else if (s.equals("3")) {
                 rootView = inflater.inflate(R.layout.fragment_about, container, false);
                 TextView textView = (TextView) rootView.findViewById(R.id.textView);
